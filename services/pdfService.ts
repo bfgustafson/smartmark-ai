@@ -10,13 +10,10 @@ export const renderPdfPagesToImages = async (file: File): Promise<string[]> => {
   const numPages = pdf.numPages;
   const images: string[] = [];
 
-  // Process all pages
-  const pagesToProcess = numPages;
-
-  for (let i = 1; i <= pagesToProcess; i++) {
+  for (let i = 1; i <= numPages; i++) {
     const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 1.0 }); // Thumbnail scale
-    
+    const viewport = page.getViewport({ scale: 1.0 });
+
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     canvas.height = viewport.height;
@@ -55,53 +52,37 @@ export const generateWatermarkedPdf = async (
   const helveticaFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pages = pdfDoc.getPages();
 
-  // We only have analysis for the pages we processed. 
-  
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
     const { width, height } = page.getSize();
-    
-    // Find matching analysis or use default/last
-    const analysis = processedPages[i]?.analysis || 
-                     processedPages[processedPages.length - 1]?.analysis || 
+
+    const analysis = processedPages[i]?.analysis ||
+                     processedPages[processedPages.length - 1]?.analysis ||
                      { watermarkColor: '#808080', opacity: 0.3, isDark: false, reasoning: 'default', recommendedSpacing: 1.0 };
 
     const colorRgb = hexToRgb(analysis.watermarkColor);
-    
-    let fontSize = width / 15; 
-    let textWidth = helveticaFont.widthOfTextAtSize(watermarkText, fontSize);
-    let textHeight = helveticaFont.heightAtSize(fontSize);
-
-    let x = 0;
-    let y = 0;
-    let rotation = degrees(0);
 
     if (globalPosition === WatermarkPosition.TILED) {
-      // Tiled logic matching the improved preview
-      fontSize = width / 24; 
-      textWidth = helveticaFont.widthOfTextAtSize(watermarkText, fontSize);
-      textHeight = helveticaFont.heightAtSize(fontSize);
-      rotation = degrees(-30);
+      // Match preview: 10px text in ~426px container ≈ 2.3% of width
+      const fontSize = width / 42;
+      const rotation = degrees(-30); // matches preview's -rotate-[30deg]
 
-      // Define grid spacing with AI recommendation
       const spacingMultiplier = analysis.recommendedSpacing || 1.0;
-      
-      // ALGORITHMIC BASELINE + AI ADJUSTMENT
-      // The baseline is "Place text based on length" -> textWidth.
-      // Then we add padding. The padding scales with font size.
-      // The AI "evaluates" this by providing the multiplier.
-      const horizontalPadding = fontSize * 4; 
-      const verticalPadding = fontSize * 6;
 
-      const gapX = (textWidth + horizontalPadding * spacingMultiplier);
-      const gapY = (textHeight + verticalPadding * spacingMultiplier);
+      // Match preview's percentage-based spacing algorithm exactly:
+      //   charApproxWidth = 2.5% of container width per character
+      //   basePaddingX = 15% of container width
+      //   basePaddingY = 20% of container height
+      const approxTextWidth = watermarkText.length * (width * 0.025);
+      const basePaddingX = width * 0.15;
+      const basePaddingY = height * 0.20;
 
-      // Loop to cover the entire page with some bleed for rotation
-      // We start negative and go beyond width/height to ensure corners are covered when rotated
+      const gapX = approxTextWidth + (basePaddingX * spacingMultiplier);
+      const gapY = basePaddingY * spacingMultiplier;
+
+      // Cover entire page with bleed for rotation
       for (let ty = -height * 0.5; ty < height * 1.5; ty += gapY) {
         for (let tx = -width * 0.5; tx < width * 1.5; tx += gapX) {
-           // Create a brick-offset effect
-           // Normalize loop index for modulus
            const rowIdx = Math.floor(ty / gapY);
            const offsetX = (rowIdx % 2 === 0) ? 0 : gapX / 2;
 
@@ -111,39 +92,50 @@ export const generateWatermarkedPdf = async (
             size: fontSize,
             font: helveticaFont,
             color: rgb(colorRgb.r, colorRgb.g, colorRgb.b),
-            opacity: analysis.opacity, 
+            opacity: analysis.opacity,
             rotate: rotation,
           });
         }
       }
     } else {
-      // Single Position Logic
+      // Single position: match preview's text-xl in ~426px ≈ 4.7% of width
+      const fontSize = width / 21;
+      const textWidth = helveticaFont.widthOfTextAtSize(watermarkText, fontSize);
+      const textHeight = helveticaFont.heightAtSize(fontSize);
+
+      // Match preview's top-8/left-8 (2rem ≈ 3.7% of container width)
+      const margin = width * 0.037;
+
+      let x = 0;
+      let y = 0;
+      let rotation = degrees(0);
+
       switch (globalPosition) {
         case WatermarkPosition.CENTER:
           x = (width - textWidth) / 2;
           y = (height - textHeight) / 2;
           break;
         case WatermarkPosition.TOP_LEFT:
-          x = 40;
-          y = height - textHeight - 40;
+          x = margin;
+          y = height - textHeight - margin;
           break;
         case WatermarkPosition.TOP_RIGHT:
-          x = width - textWidth - 40;
-          y = height - textHeight - 40;
+          x = width - textWidth - margin;
+          y = height - textHeight - margin;
           break;
         case WatermarkPosition.BOTTOM_LEFT:
-          x = 40;
-          y = 40;
+          x = margin;
+          y = margin;
           break;
         case WatermarkPosition.BOTTOM_RIGHT:
-          x = width - textWidth - 40;
-          y = 40;
+          x = width - textWidth - margin;
+          y = margin;
           break;
         case WatermarkPosition.DIAGONAL:
-          rotation = degrees(45);
-          // Center calculation with rotation consideration
+          // Match preview's -rotate-45 (clockwise descending)
+          rotation = degrees(-45);
           x = (width / 2) - (textWidth / 2 * 0.7);
-          y = (height / 2) - (textHeight / 2);
+          y = (height / 2) + (textHeight / 2);
           break;
       }
 
