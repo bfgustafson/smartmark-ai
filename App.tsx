@@ -151,7 +151,16 @@ function App() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `watermarked-${doc.file.name}`;
+
+        // Sanitize the watermark text for use in a filename. Fall back to
+        // "watermarked" if the user cleared the field or it reduces to nothing.
+        const safeMark = state.watermarkText
+          .trim()
+          .replace(/[\\/:*?"<>|]+/g, '')
+          .replace(/\s+/g, '_');
+        const prefix = safeMark.length > 0 ? safeMark : 'watermarked';
+
+        link.download = `${prefix}-${doc.file.name}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
