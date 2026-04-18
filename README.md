@@ -2,7 +2,7 @@
 
 Intelligent, contrast-aware PDF watermarking that runs entirely in your browser. No API keys, no servers, no accounts — just open and go.
 
-Upload any PDF and every page is automatically analyzed for brightness, content density, and contrast. The app picks the optimal watermark color, opacity, and spacing so your mark is always legible without obscuring the content.
+Upload one or many PDFs and every page is automatically analyzed for brightness, content density, and contrast. The app picks the optimal watermark color, opacity, and spacing so your mark is always legible without obscuring the content. Each file is exported back to you as its own watermarked PDF.
 
 ![SmartMark AI Screenshot](https://img.shields.io/badge/status-ready-brightgreen) ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -52,18 +52,19 @@ npm run build
 - **Live Preview** — See exactly how watermarks will render on every page before exporting.
 - **PDF Export** — Generates a new standard PDF with watermarks embedded using pdf-lib. Original file is never modified.
 - **Batch Processing** — Handles multi-page PDFs, analyzing and watermarking each page individually.
+- **Multi-File Upload** — Drop multiple PDFs at once (or add more later). Each file is processed independently and downloaded as its own watermarked PDF.
 
 ---
 
 ## How It Works
 
-1. **Upload** — Drop a PDF or click to browse. PDF.js renders each page to a canvas image.
+1. **Upload** — Drop one or more PDFs (or click to browse). PDF.js renders each page to a canvas image. Add more files any time via the "Add PDFs" button in the editor.
 2. **Analyze** — Click "Optimize with AI." Each page image is sampled at reduced resolution (~200px) to compute:
    - **Average brightness** (weighted RGB per ITU-R BT.601)
    - **Variance** (how uniform vs. varied the content is)
    - **Edge density** (ratio of high-contrast neighboring pixels)
 3. **Configure** — Set your watermark text and position. The analysis determines color, opacity (0.15–0.35), and tiled spacing (1.0–2.2x) per page.
-4. **Export** — pdf-lib embeds Helvetica Bold watermarks into a new PDF at the computed settings. Downloads as `watermarked-<filename>.pdf`.
+4. **Export** — pdf-lib embeds Helvetica Bold watermarks into a new PDF at the computed settings. Each uploaded file downloads as its own `watermarked-<filename>.pdf`.
 
 ---
 

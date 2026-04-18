@@ -3,7 +3,7 @@ import { Upload, FileType, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 
 interface DropzoneProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (files: File[]) => void;
 }
 
 export const Dropzone: React.FC<DropzoneProps> = ({ onFileSelect }) => {
@@ -22,25 +22,32 @@ export const Dropzone: React.FC<DropzoneProps> = ({ onFileSelect }) => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      validateAndPass(e.dataTransfer.files[0]);
+      validateAndPass(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      validateAndPass(e.target.files[0]);
+      validateAndPass(Array.from(e.target.files));
     }
   };
 
-  const validateAndPass = (file: File) => {
-    // Basic check - we primarily support PDF for the full feature set
-    if (file.type === 'application/pdf') {
-      onFileSelect(file);
-    } else {
+  const validateAndPass = (files: File[]) => {
+    const pdfs = files.filter(f => f.type === 'application/pdf');
+    const rejected = files.length - pdfs.length;
+
+    if (pdfs.length === 0) {
       alert("Currently, only PDF files are fully supported for browser-based processing. Please convert your PPT to PDF first.");
+      return;
     }
+
+    if (rejected > 0) {
+      alert(`${rejected} non-PDF file(s) were skipped. Only PDFs are supported.`);
+    }
+
+    onFileSelect(pdfs);
   };
 
   return (
@@ -59,6 +66,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({ onFileSelect }) => {
         ref={inputRef}
         className="hidden"
         accept=".pdf"
+        multiple
         onChange={handleFileInput}
       />
       
@@ -73,10 +81,10 @@ export const Dropzone: React.FC<DropzoneProps> = ({ onFileSelect }) => {
         </div>
         <div>
           <h3 className="text-xl font-semibold text-white mb-2">
-            Upload your PDF
+            Upload your PDFs
           </h3>
           <p className="text-gray-400 text-sm max-w-sm">
-            Drag and drop your presentation or click to browse. 
+            Drag and drop one or more presentations, or click to browse.
             We'll analyze each page to apply a contrast-perfect watermark.
           </p>
         </div>

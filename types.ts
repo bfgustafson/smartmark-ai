@@ -23,11 +23,16 @@ export enum WatermarkPosition {
   TILED = 'tiled'
 }
 
-export interface AppState {
-  file: File | null;
+export interface ProcessedDocument {
+  id: string;
+  file: File;
   pages: ProcessedPage[];
-  watermarkText: string;
   isProcessing: boolean;
+}
+
+export interface AppState {
+  documents: ProcessedDocument[];
+  watermarkText: string;
   globalPosition: WatermarkPosition;
   isGeneratingPdf: boolean;
 }
